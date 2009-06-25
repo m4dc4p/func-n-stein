@@ -1,0 +1,20 @@
+dist
+*~
+*.manifest
+*.hi
+*.o
+*.exe
+
+# The output of lhs2TeX
+*.tex
+
+# Various temporary files from LaTeX
+*.aux
+*.log
+*.out
+*.ptb
+
+# The final output
+*.dvi
+*.ps
+*.pdf
