@@ -1,0 +1,12 @@
+name: func-n-stein
+description: ICFP 2009.
+version: 0.1
+cabal-version: >= 1.6 && < 2
+build-type: Simple
+
+executable func-n-stein
+  main-is: Main.hs
+  build-depends: base >= 3 && < 4
+  hs-source-dirs: .
+                                
+
