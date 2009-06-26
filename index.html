@@ -35,6 +35,50 @@
       >. All code committed will be available on <a href="http://github.com/m4dc4p/func-n-stein/tree/master"
       >GitHub</a
       > and can be cloned from <tt>git://github.com/m4dc4p/func-n-stein.git</tt>.</p
+    ><h3 id="june-25-2009----1143-am"
+    >June 25, 2009 -- 11:43 AM</h3
+    ><p
+    >All times PDT, by the way.</p
+    ><p
+    >Downloaded the spec, read through it, seems a lot like last years problem. I have to implement a virtual machine and then solve a bunch of orbit problems? Sounds doubly tough. For starters I think I will implement something to write the <em
+      >submission</em
+      > format, and submit an empty solution. We'll see what happens.</p
+    ><h3 id="june-25-2009----203-pm"
+    >June 25, 2009 -- 2:03 PM</h3
+    ><p
+    >Got code to write a solution and have submitted an empty solution. Not sure if double representation will be written correctly - does Haskell write it in &quot;IEEE 764&quot; notation automatically? Had to do some pointer conversions to write doubles as binary data:</p
+    ><pre
+    ><code
+      >          v &lt;- allocaBytes 8 $ \p -&gt; do 
+                   poke p val 
+                   mapM (\i -&gt; peekElemOff (castPtr p) i) [0, 1]
+</code
+      ></pre
+    ><p
+    >''val'' is our double value. I write to 8 byte memory location, then read out as two 32-bit values:</p
+    ><pre
+    ><code
+      >          -- write to file
+          hPutWord (int2Word addr)
+          hPutWord (v !! 0)
+          hPutWord (v !! 1)
+</code
+      ></pre
+    ><p
+    >''hPutWord'' fixes the type, as it takes a Word32 and writes it to a file:</p
+    ><pre
+    ><code
+      > hPutWord :: Word32 -&gt; IO ()
+ hPutWord w = with w $ \p -&gt; do
+      hPutBuf h p (sizeOf w)
+</code
+      ></pre
+    ><p
+    >I do se a bug above, where I am not writing the value in little-endian order. Better fix that!</p
+    ><h3 id="june-25-2009----252-pm"
+    >June 25, 2009 -- 2:52 PM</h3
+    ><p
+    >Fairly confident output file format is being written correctly. At least the competition server doesn't complain When I submit solutions that write to the correct config port. Also cabalized early so it won't be too painful later -- I expect dependencies to grow.</p
     ></div>
 </div>
 </div>
