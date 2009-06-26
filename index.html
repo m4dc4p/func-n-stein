@@ -79,6 +79,59 @@
     >June 25, 2009 -- 2:52 PM</h3
     ><p
     >Fairly confident output file format is being written correctly. At least the competition server doesn't complain When I submit solutions that write to the correct config port. Also cabalized early so it won't be too painful later -- I expect dependencies to grow.</p
+    ><p
+    >Now I'll write some code to read the executable file format.</p
+    ><h3 id="june-25-2009----337-pm"
+    >June 25, 2009 -- 3:37 PM</h3
+    ><p
+    >Got some code that seems to read the executable file format (''ReadObf.hs''). Lots of grungy work with pointers, bits and bytes here. Reading words and doubles is a lot like writing them:</p
+    ><pre
+    ><code
+      >        getWord p i = do
+            v &lt;- peekElemOff (castPtr p) i
+            return $ (v :: Word32)
+        getDouble p i = do
+            v &lt;- peekElemOff (castPtr p) i
+            return $ (v :: Double)
+</code
+      ></pre
+    ><p
+    >where ''p'' points to the buffer containing the file in memory and ''i'' is an absolute offset to start reading from. For some reason the file format alternates between (instr, val) and (val, instr). I created two nearly identical functions to read each:</p
+    ><pre
+    ><code
+      >        toInstrE i = do
+            -- With even addresses, instruction comes first.
+            instr &lt;- getWord p i 
+            val &lt;- getDouble p (i + 1)
+            return $ Instr instr val
+        toInstrO i = do
+            -- With odd addresses, value comes first.
+            val &lt;- getDouble p i
+            instr &lt;- getWord p (i + 2)
+            return $ Instr instr val
+</code
+      ></pre
+    ><p
+    >''Instr Word32 Double'' will represent a raw instruction, before it is translated to an op code/value pair for the machine. Then I need to iterate over the array to convert each 96-bit value into an ''Instr'' value. ''foldM'' looked like the right fit:</p
+    ><pre
+    ><code
+      >    instrs &lt;- foldM (\is (f, i) -&gt; f i is) [] (zip (cycle [applyE, applyO]) [0,3..size])
+</code
+      ></pre
+    ><p
+    >Ouch! ''applyE'' and ''applyO'' let me alternate the function I am using to convert values:</p
+    ><pre
+    ><code
+      >        applyE i instrs = do
+            is &lt;- toInstrE i
+            return (is : instrs)
+        applyO i instrs = do
+            is &lt;- toInstrO i
+            return (is : instrs)
+</code
+      ></pre
+    ><p
+    >''[0,3..size]'' give me the indices to read process every 3 words in the buffer. ''cycle [applyE, applyO]'' gives me a list of alternating functions to apply. I zip those together and fold. My instructions pop out the other end!</p
     ></div>
 </div>
 </div>
