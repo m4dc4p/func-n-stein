@@ -14,7 +14,3 @@ dist
 *.out
 *.ptb
 
-# The final output
-*.dvi
-*.ps
-*.pdf
