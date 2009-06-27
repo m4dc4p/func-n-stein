@@ -6,6 +6,8 @@ import Data.Word
 import Foreign
 import System.IO
 
+import Machine
+
 -- Team ID will always be the same, as will the magic number
 
 magic :: Word32
@@ -18,10 +20,6 @@ type ScenarioID = Int
 -- from the length of the list. We don't store timestep because we can
 -- derive that from the order of elements in the list given to Solution.
 type Frame = [PortValue]
-
-type Addr = Int
-type Value = Double 
-data PortValue = PortValue Addr Value
 
 -- | Our solution indicates the scenario and the frames making up
 -- our trace. Frames come in order, from timestep 0 to end.
@@ -42,7 +40,7 @@ writeSolution file (Solution scenario frames) =
                        poke p val 
                        mapM (\i -> peekElemOff (castPtr p) i) [0, 1]
               -- write to file
-              hPutWord (int2Word addr)
+              hPutWord addr
               hPutWord (v !! 0)
               hPutWord (v !! 1)
           writeFrame :: Int -> Frame -> IO ()
@@ -51,7 +49,8 @@ writeSolution file (Solution scenario frames) =
               hPutWord (int2Word . length $ ports)
               mapM_ writePort ports
           finalFrame = []
-      mapM_ (uncurry writeFrame) (zip [0..] (frames ++ [finalFrame]))
+          configFrame = [PortValue configPort (fromRational . toRational $ scenario)]
+      mapM_ (uncurry writeFrame) (zip [0..] (configFrame : frames ++ [finalFrame]))
 
 word2Char :: Word32 -> Char
 word2Char = toEnum . fromEnum

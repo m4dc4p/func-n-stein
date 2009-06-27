@@ -10,23 +10,51 @@ import Control.Monad
 import Debug.Trace
 import Foreign
 import Numeric
+import Network.CGI.Protocol (maybeRead)
 
 import Machine
 import Solution
 import ReadObf
+import Scenarios
 
-data Options = Scenario String
-            | Executable String
+data Scenario = Hohmann
+              | MeetAndGreet 
+              | Eccentric
+              | Empty
+              | Single
+              | Simple
+              | Echo
+              | DoNothing
+  deriving (Eq, Show, Read)
+
+data Options = Scenario Scenario
+            | Config Int
             | Help 
-  deriving Eq
+  deriving (Eq, Show, Read)
 
-opts = [Option ['s'] ["scenario"] (ReqArg Scenario "scenario") "Scenario ID to use (empty and single are special)."
-       , Option ['e'] ["executable"] (ReqArg Executable "executable") "OBF file to read."
+opts = [Option ['s'] ["scenario"] (ReqArg scenario "scenario") "Scenario to use: hohmann, meetAndGreet, eccentric, empty, single, simple, echo or nothing."
+       , Option ['c'] ["config"] (ReqArg config "config") "Configuration of scenario to run."
        , Option ['?'] ["help"] (NoArg Help) "Help text." ]
+
+scenario arg = 
+    Scenario $ case map toLower arg of
+      "hohmann" -> Hohmann
+      "meetAndGreet" -> MeetAndGreet
+      "eccentric" -> Eccentric
+      "empty" -> Empty
+      "single" -> Single
+      "simple" -> Simple
+      "echo" -> Echo
+      "nothing" -> DoNothing
+      _ -> error $ "Unrecognized scenario: " ++ arg
+
+config which = case maybeRead which of
+                 Just i -> Config i
+                 Nothing -> error $ "Can't read config: " ++ which
 
 findScenario as = listToMaybe [s | (Scenario s) <- as]
 findHelp as = listToMaybe [h | h@Help <- as]
-findObf as = listToMaybe [f | (Executable f) <- as]
+findConfig as = listToMaybe [s | (Config s) <- as]
 
 main = do
   (args, _, err) <- getArgs >>= return . getOpt RequireOrder opts 
@@ -34,29 +62,52 @@ main = do
          putStrLn $ usageInfo "Usage: main [options]" opts
          exitWith ExitSuccess
   let scenarioID = maybe (error $ "Scenario ID not supplied")
-                         (map toLower)
+                         id
                          (findScenario args)
-      obf = maybe (error $ "OBF file must be supplied.")
-                  id
-                  (findObf args)
-      baseName = takeBaseName obf ++ "_" ++ scenarioID 
+      
+      obf = case scenarioID of
+              Hohmann -> "bin1.obf"
+              MeetAndGreet -> "bin2.obf"
+              Eccentric -> "bin3.obf"
+              Empty -> "bin1.obf"
+              Single -> "bin1.obf"
+              Simple -> "bin1.obf"
+              Echo -> "bin1.obf"
+              DoNothing -> "bin1.obf"
+      configID = maybe 1001
+                     id
+                     (findConfig args)
+      baseName = takeBaseName obf ++ "_" ++ show configID 
       obfDump = baseName ++ ".dmp"
       obfRaw = baseName ++ ".raw"
       programName = baseName ++ ".prg"
-      fileName = baseName ++ ".obs"
+      traceFile = baseName ++ ".trc"
+      fileName = baseName ++ ".osf"
+      hohmannIDs = ["1001", "1002", "1003", "1004"]
+      meetAndGreetIDs = ["2001", "2002", "2003", "2004"]
+      eccentricIDs = ["3001", "3002", "3003", "3004"]
   instrs <- withBinaryFile obf ReadMode readObf
   writeRawFile obf obfRaw
   writeInstructionsOnly obfDump instrs
-  writeProgram programName instrs
+  let program = instrsToProgram instrs
+  writeProgram programName program
   let result = case scenarioID of
-          "empty" -> emptySolution
-          "single" -> singleSolution
-          "simple" -> simpleSolution
-          _ -> error $ "Unrecognized scenarioID " ++ scenarioID
-  writeSolution fileName result
+          Empty -> emptySolution
+          Single -> singleSolution
+          Simple -> simpleSolution
+          Echo -> runMachine (echoOutput hohmannOuts) neverStop hohmannOuts 0 configID program
+          DoNothing -> runMachine nothing neverStop hohmannOuts 0 configID program
+          Hohmann -> runMachine hohmann hohmannStop hohmannOuts 0 configID program
+          _ -> error $ "Unsupported scenario " ++ show scenarioID
+  writeTrace traceFile result
+  writeSolution fileName (Solution configID (map snd result))
 
-writeProgram programName instrs = withFile programName WriteMode $ \h -> do
-    mapM_ (hPutStrLn h . show) $ instrsToProgram instrs
+-- | Write a trace of the output for a scenario.
+writeTrace traceFile trace = withFile traceFile WriteMode $ \h -> do
+    mapM_ (hPutStrLn h . show . fst) trace
+
+writeProgram programName program = withFile programName WriteMode $ \h -> do
+    mapM_ (hPutStrLn h . show) program
 
 writeInstructionsOnly obfDump instrs = withFile obfDump WriteMode $ \h -> do
     let showInstr (Instr i val) = do
@@ -82,15 +133,26 @@ writeRawFile obf obfRaw = withBinaryFile obf ReadMode $ \f -> do
             mapM_ writeInstrRaw (zip (cycle [wE, wO]) [0,12..size])
 
 -- A solution with no inputs
-emptySolution = Solution 1001 []
+emptySolution :: Trace
+emptySolution = []
 
 -- A solution with one input
-singleSolution = Solution 1001 [[PortValue configPort 1001]
-                               ,[PortValue deltaVXPort (100.100)
-                                ,PortValue deltaVYPort (-100.100)]]
+singleSolution :: Trace
+singleSolution = [([], [mkPort configPort 1001])
+                 ,([], [PortValue deltaVXPort (100.100)
+                       ,PortValue deltaVYPort (-100.100)])]
 
--- A solution with one input
-simpleSolution = Solution 1001 [[PortValue configPort 1001]
-                            ,[PortValue deltaVXPort (100.100)
-                             ,PortValue deltaVYPort (-100.100)]
-                            ,[PortValue deltaVXPort 0]]
+-- A solution with some random inputs
+simpleSolution :: Trace
+simpleSolution = [([], [mkPort configPort 1001])
+                 ,([], [PortValue deltaVXPort (100.100)
+                       , PortValue deltaVYPort (-100.100)])
+                 ,([], [PortValue deltaVXPort 0])]
+
+-- Takes all double values found in instructions and
+-- echoes them back to an input port.
+echoSolution :: [Instr] -> Trace
+echoSolution instrs = 
+    let ports = map (\(Instr _ v) -> [PortValue deltaVXPort v]) instrs
+    in ([], [mkPort configPort 1001]) :
+       map (\p -> ([], p)) ports

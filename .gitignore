@@ -8,6 +8,7 @@ dist
 *.raw
 *.sol
 *.prg
+*.trc
 
 # The output of lhs2TeX
 *.tex
