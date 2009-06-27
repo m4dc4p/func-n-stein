@@ -43,8 +43,8 @@ writeSolution file (Solution scenario frames) =
                        mapM (\i -> peekElemOff (castPtr p) i) [0, 1]
               -- write to file
               hPutWord (int2Word addr)
-              hPutWord (v !! 1)
               hPutWord (v !! 0)
+              hPutWord (v !! 1)
           writeFrame :: Int -> Frame -> IO ()
           writeFrame step ports = do
               hPutWord (int2Word step)

@@ -6,7 +6,7 @@ build-type: Simple
 
 executable func-n-stein
   main-is: Main.hs
-  build-depends: base >= 3 && < 4
+  build-depends: base >= 3 && < 4, array >= 0.1, filepath >= 1.0
   hs-source-dirs: .
                                 
 
