@@ -41,9 +41,22 @@ main = do
                   (findObf args)
       baseName = takeBaseName obf ++ "_" ++ scenarioID 
       obfDump = baseName ++ ".dmp"
+      obfRaw = baseName ++ ".raw"
       programName = baseName ++ ".prg"
       fileName = baseName ++ ".sol"
   instrs <- withBinaryFile obf ReadMode readObf
+  withBinaryFile obf ReadMode $ \f -> do
+      size <- hFileSize f >>= return . fromEnum
+      allocaBytes size $ \p -> do
+          _ <- hGetBuf f p size
+          withBinaryFile obfRaw WriteMode $ \h -> do
+              let writeInstrRaw (f, i1) = do
+                      -- hPutBuf h (p `plusPtr` (f i1)) 4
+                      v1 :: Word32 <- peekByteOff p (f i1)
+                      hPutStrLn h (showHex (opDMask v1) (" : " ++ showHex v1 "") )
+                  wE i = i + 8
+                  wO i = i
+              mapM_ writeInstrRaw (zip (cycle [wE, wO]) [0,12..size])
   -- write raw instructions
   withFile obfDump WriteMode $ \h -> do
       let showInstr (Instr i val) = do
@@ -51,7 +64,7 @@ main = do
                   v1 <- peekElemOff (castPtr p) 0
                   v2 <- peekElemOff (castPtr p) 1
                   return [v1, v2]
-              hPutStrLn h $ showHex i (" : " ++ showHex (revWord i) (", (" ++ showHex v1 (", " ++ showHex v2 ")")))
+              hPutStrLn h $ showHex (opDMask i) (" : " ++ showHex i (" : " ++ showHex (revWord i) (", (" ++ showHex v1 (", " ++ showHex v2 ")"))))
       mapM_ showInstr instrs
 
   withFile programName WriteMode $ \h -> do
