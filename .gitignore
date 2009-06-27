@@ -4,6 +4,10 @@ dist
 *.hi
 *.o
 *.exe
+*.dmp
+*.raw
+*.sol
+*.prg
 
 # The output of lhs2TeX
 *.tex
