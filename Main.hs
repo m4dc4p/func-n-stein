@@ -91,20 +91,22 @@ main = do
   writeInstructionsOnly obfDump instrs
   let program = instrsToProgram instrs
   writeProgram programName program
-  let result = case scenarioID of
-          Empty -> emptySolution
-          Single -> singleSolution
-          Simple -> simpleSolution
-          Echo -> runMachine (echoOutput hohmannOuts) neverStop hohmannOuts 0 configID program
-          DoNothing -> runMachine nothing neverStop hohmannOuts 0 configID program
-          Hohmann -> runMachine hohmann hohmannStop hohmannOuts 0 configID program
-          _ -> error $ "Unsupported scenario " ++ show scenarioID
+  let result = runScenario scenarioID configID program
   writeTrace traceFile result
   writeSolution fileName (Solution configID (map snd result))
 
+-- | Run a specific scenario.
+runScenario Empty _ _ = emptySolution
+runScenario Single _ _ = singleSolution
+runScenario Simple _ _ = simpleSolution
+runScenario Echo configID program = runMachine (echoOutput hohmannOuts) neverStop hohmannOuts 0 configID program
+runScenario DoNothing configID program = runMachine nothing neverStop hohmannOuts 0 configID program
+runScenario Hohmann configID program = runMachine hohmann hohmannStop hohmannOuts 0 configID program
+runScenario scenarioID configID program = error $ "Unsupported scenario " ++ show scenarioID
+
 -- | Write a trace of the output for a scenario.
 writeTrace traceFile trace = withFile traceFile WriteMode $ \h -> do
-    mapM_ (hPutStrLn h . show . fst) trace
+    mapM_ (hPutStrLn h . show) trace
 
 writeProgram programName program = withFile programName WriteMode $ \h -> do
     mapM_ (hPutStrLn h . show) program

@@ -7,7 +7,15 @@ build-type: Simple
 executable func-n-stein
   main-is: Main.hs
   build-depends: base >= 3 && < 4, array >= 0.1, filepath >= 1.0,
-                 containers >= 0.1, cgi >= 3001.0
+                 containers >= 0.1, cgi >= 3001
+  ghc-options: -O2 -funbox-strict-fields
+  ghc-prof-options: -prof -auto-all                                                        
+  hs-source-dirs: .
+
+executable hohmann-vis
+  main-is: HohmannVis.hs
+  build-depends: base >= 3 && < 4, array >= 0.1, filepath >= 1.0,
+                 containers >= 0.1, chalkboard == 0.2, chalkboard-viewer == 0.1
   ghc-options: -O2 -funbox-strict-fields
   ghc-prof-options: -prof -auto-all                                                        
   hs-source-dirs: .
