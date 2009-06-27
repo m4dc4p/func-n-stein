@@ -117,6 +117,89 @@ the buffer. ''cycle [applyE, applyO]'' gives me a list of alternating
 functions to apply. I zip those together and fold. My instructions 
 pop out the other end!
 
+### June 25, 2009 -- 10:51 PM
+
+Everything looked good until I tried to convert the bytes read from
+the executable format to opcodes. "Unrecognized D-type op: 9" -- WTF?
+All I can say is - bastards! The instructions are stored in reverse
+binary.  For example, the spec says a D-type op code occupies bits "31
+- 28", with value from 0x1 - 0x6. I assumed the bits were in 28 - 31,
+in *that* order. No! I am pretty sure 0x1 is represented as "1000"
+(from 31 - 28), not "0001"!  Well, hopefully this page on
+[bit-twiddling
+tricks](http://graphics.stanford.edu/~seander/bithacks.html#BitReverseObvious)
+has an algorith for reversing a word. I should be able to hide that
+from the rest of the program and convert to opcodes.
+
+### June 26, 2009 -- 6:40 AM
+
+I'm still not sure if the instruction word needs to be reversed, because
+I wasted a bunch of time trying to figure out why I was reading illegal
+instructions in the .obf file. I went to bed last night stuck -- it
+seemed I was reading the file incorrectly, or at least that's all I 
+could guess. I figured it had something to do with ''little-endianess,''
+which I felt unsure of. I was all ready to go back to first principles
+and experiment with reading and writing obf files. Fortunately I 
+decided to look over the problem description again while I was eating
+breakfast. Lo and behold, I had the executable format wrong -- I 
+coded it so that the instruction came first on **even** frames. 
+That's wrong -- it's **odd** frames! Making that small switch
+allowed me to read the obf file correctly. 
+
+Now to determine if the instructions are stored reversed or not.
+
+### June 26, 2009 -- 6:53 AM
+
+Bingo! No reversal needed. Hallelujah. A quick test showed that 
+parsing the obf file failed with the reversal added. Ergo, it must
+be wrong. Now let's implement our machine.
+
+### June 26, 2009 -- 2:45 PM
+
+The machine seems to be working and is fairly performant, though not
+amazing. 10000 iterations on bin1 go pretty fast. 100,000 or 1,000,000
+get progressively worse. Hopefully it won't be too bad. Simulating a machine
+with mutable memory is always interesting in Haskell. The magic of ''runSTUArray''
+is saving me here. Each iteration of the machine is run inside the ST monad, which
+allows me to modify a mutable array (from Machine.hs):
+
+    step :: Machine -> STUArray s Int Val -> (OpCode, Addr) -> ST s (STUArray s Int Val)
+    step m mem (op, addr) = ...
+
+''mem'' is my mutable array. While the machine executes its program once, I can update
+the array as much as I like. You can see that in action in the ''exec'' function:
+
+    exec :: Machine -> Input -> Machine
+    exec m@(Machine { instrs = instrs }) inps = 
+         let m' = m { inputs = readInputs inps }
+             newMem = runSTUArray $ do
+                    mem' <- thaw (dataMem m)
+                    foldM (step m') mem' (zip instrs [0..])
+
+''foldM'' takes care of executing all instructions, while step updates the mutable
+array as needed. The final array is returned by runSTUArray as an **immutable** array,
+meaning its like any other Haskell value. 
+
+This is a fast way to deal with mutable values but there are some downsides. Since I want
+to keep a trace of the output around, I can't reuse the same array on subsequent iterations 
+(at least, not safely). That is why you see ''thaw'' in there, instead of ''unsafeThaw''. 
+
+The second is that runSTUArray can **only** return a single array. The machine has several
+mutable values: memory, output ports, and the status register. I have no idea if output ports
+can be written to more than once, but better safe than sorry. So the mutable array above actually
+holds all those values, and I split it up at the end of each execution (where ''newMem'' is the
+final state of memory after the iteration):
+
+        outputs = runSTUArray $ do
+            -- output ports after memory in array.
+            newListArray (0, outputSize) (map (newMem !) [memSize .. memSize + outputSize - 1])
+        statusA = runSTUArray $ do
+            -- status bit at end of memory
+            newListArray (0, 1) [newMem ! (memSize + outputSize)] 
+
+Since I still have no idea how to do the math for these problems, I'm going to try and use 
+chalkboard (from Hackage) to write a visualizer so I can see what these orbits look like ...
+
 </div>
 </div>
 </div>
