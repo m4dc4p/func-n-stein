@@ -6,6 +6,7 @@ import Graphics.Chalkboard
 import Graphics.Chalkboard.Viewer
 import Control.Concurrent.MVar
 import Control.Concurrent
+import System.Exit
 
 import Machine
 
@@ -19,22 +20,31 @@ main = do
                  line <- hGetLine h
                  rest <- getLines h
                  return $ line : rest
-        getPos :: (Output, Input) -> (Val, Val)
-        getPos ([_, _, (PortValue _ px), (PortValue _ py), _],_) = (px, py)
-        config = [WindowSize 800 600
+        toR :: Val -> R
+        toR = fromRational . toRational
+        getPos :: (Output, Input) -> (R, R)
+        getPos ([_, _, (PortValue _ px), (PortValue _ py), _],_) = (toR px, toR py)
+        config = [WindowSize 200 200
                  , WindowPos 10 10
-                 , PixelSize 20
+                 , PixelSize 4
                  , FrameTarget 30]
-        factor = 10e-8
+        factor = 1e-8
         visible c t = if t then alpha c else transparent black
     (t:ts) <- withFile traceF ReadMode $ \h -> do
                 getLines h >>= return . map (getPos . read)
     let frame (x, y) = fmap unAlpha $
-                       fmap (visible white) $
-                       circularMaskFor ((fromRational $ toRational x) * factor, (fromRational $ toRational y) * factor) 0.1 
+                       (fmap (visible white) $
+                       scale factor $ 
+                       circularMaskFor (x * 2, y * 2) (0.01/factor))
+                       `over`
+                       (fmap (visible blue) $
+                       scale factor $ 
+                       circularMaskFor (0, 0) (0.03/factor))
     m <- newMVar (frame t)
-    let loop (f':fs') = do
+    let loop [] _ = exitWith ExitSuccess
+        loop (f':fs') i = do
+         putStrLn $ "Frame " ++ show i
          putMVar m (frame f')
-         loop fs'
-    forkIO (loop ts)
+         loop (drop 10 fs') (i + 1)
+    forkIO (loop ts 1)
     initBoardViewer config m
