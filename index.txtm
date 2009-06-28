@@ -200,8 +200,20 @@ final state of memory after the iteration):
 Since I still have no idea how to do the math for these problems, I'm going to try and use 
 chalkboard (from Hackage) to write a visualizer so I can see what these orbits look like ...
 
-</div>
-</div>
-</div>
-</div>
-</div>
+### June 28, 2009 10:45 AM 
+
+Got visualization for the first problem working with Chalkboard last night. What a great little 
+library. Funny enough, it's also by Andy Gill, one of the contest organizers. My only complaint
+is speed - it's unbearably slow at resoulutions past 200 x 200. Good enough for me though
+
+I found the site with the math I need for at least the first problem,
+[http://www.braeunig.us/space/](http://www.braeunig.us/space/).  Very
+understandable and much clearer than the Wikipedia entry referenced in
+the contest document. 
+
+Reading the contest blog, it seems the first problem is actually
+scored based on fuel **used**, not remaining. Hohmann is the wrong
+approach to the problem in that case, but I'm still going to implement
+it just to see how it behaves.
+
+</div> </div> </div> </div> </div>
