@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Machine
 
 where
@@ -10,9 +11,7 @@ import qualified Data.IntMap as Map
 import Data.IntMap (IntMap, empty)
 import Control.Monad
 
-deltaVXPort = 2 :: Word32
-deltaVYPort = 3 :: Word32
-configPort = 0x3E80 :: Word32
+import Vector
 
 type Addr = Word32 -- 14 bits used
 type Val = Double
@@ -52,12 +51,29 @@ data Machine = Machine { instrs :: [OpCode]
                        , status :: !Int 
                        , inputs :: IntMap Val }
 
-mkPort :: Word32 -> Double -> PortValue
-mkPort = PortValue
+-- | Make inputs to fire rockets with direction & magnitude 
+-- indicated.
+deltaV :: Vector2 -> Input
+deltaV (V2 (!x, !y)) = [mkPort deltaVXPort x, mkPort deltaVYPort y]
 
-memSize = 16384
-outputSize = 48 -- Not quite correct.
-statusSize = 1
+-- | Extract current position.
+currPos :: Machine -> Vector2
+currPos (Machine { outputs = outs }) = 
+    let x = outs ! 0x2
+        y = outs ! 0x3
+    in V2 (x `seq` x, y `seq` y)
+
+-- | Extract current score
+currScore :: Machine -> Double
+currScore (Machine { outputs = outs }) =
+    let s = outs ! 0x0
+    in s `seq` s
+
+-- | Extract current score
+currFuel :: Machine -> Double
+currFuel (Machine { outputs = outs }) =
+    let s = outs ! 0x1
+    in s `seq` s
 
 -- | Make an initial machine with the program given.
 mkMachine :: Program -> Machine
@@ -177,3 +193,14 @@ step (Machine { inputs = inp }) mem (Input r1, i) = do
     writeDataA mem i input
     return $! mem
 step m mem (op, addr) = return $ mem
+
+deltaVXPort = 2 :: Word32
+deltaVYPort = 3 :: Word32
+configPort = 0x3E80 :: Word32
+memSize = 16384
+outputSize = 48 -- Not quite correct.
+statusSize = 1
+
+mkPort :: Word32 -> Double -> PortValue
+mkPort = PortValue
+

@@ -15,7 +15,8 @@ import Network.CGI.Protocol (maybeRead)
 import Machine
 import Solution
 import ReadObf
-import Scenarios
+import Scenario
+import Hohmann
 
 data Scenario = Hohmann
               | MeetAndGreet 
@@ -64,7 +65,6 @@ main = do
   let scenarioID = maybe (error $ "Scenario ID not supplied")
                          id
                          (findScenario args)
-      
       obf = case scenarioID of
               Hohmann -> "bin1.obf"
               MeetAndGreet -> "bin2.obf"
@@ -77,7 +77,7 @@ main = do
       configID = maybe 1001
                      id
                      (findConfig args)
-      baseName = takeBaseName obf ++ "_" ++ show configID 
+      baseName = (map toLower (show scenarioID)) ++ "_" ++ show configID 
       obfDump = baseName ++ ".dmp"
       obfRaw = baseName ++ ".raw"
       programName = baseName ++ ".prg"
@@ -99,9 +99,9 @@ main = do
 runScenario Empty _ _ = emptySolution
 runScenario Single _ _ = singleSolution
 runScenario Simple _ _ = simpleSolution
-runScenario Echo configID program = runMachine (echoOutput hohmannOuts) neverStop hohmannOuts 0 configID program
-runScenario DoNothing configID program = runMachine nothing neverStop hohmannOuts 0 configID program
-runScenario Hohmann configID program = runMachine hohmann hohmannStop hohmannOuts 0 configID program
+runScenario Echo configID program = runMachine (echoOutput hohmannOuts) neverStop hohmannOuts hohmannInit configID program
+runScenario DoNothing configID program = runMachine nothing neverStop hohmannOuts hohmannInit configID program
+runScenario Hohmann configID program = runMachine hohmann hohmannStop hohmannOuts hohmannInit configID program
 runScenario scenarioID configID program = error $ "Unsupported scenario " ++ show scenarioID
 
 -- | Write a trace of the output for a scenario.

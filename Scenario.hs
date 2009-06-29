@@ -1,12 +1,14 @@
-{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
-module Scenarios 
+{-# LANGUAGE BangPatterns #-}
+module Scenario
 
 where
 
 import Data.List
+import Data.Array.Unboxed
 
 import Machine
 import Solution
+import Vector
 
 type Controller s = s -> Machine -> (s, Input)
 type Tester s = s -> Machine -> Bool
@@ -27,15 +29,8 @@ echoOutput extract x m =
 neverStop :: Tester s
 neverStop _ _ = False
 
--- | Read outputs for hohmann scenario.
-hohmannOuts :: Extractor
-hohmannOuts m = readOutput m [0x0, 0x1, 0x2, 0x3, 0x4]
-
--- | The controller that runs the hohmann scenario
-hohmann :: Controller Int
-hohmann = nothing
-
-hohmannStop = neverStop
+earthGM :: Double
+earthGM = 6.67428e-11 * 6e24
 
 data Go s = Go !Input s !Machine !Int
 
@@ -44,9 +39,10 @@ runMachine :: Controller s
            -> Extractor
            -> s -> ScenarioID -> Program -> Trace
 runMachine sim done getOutps init scenario prog =
-    let maxIterations = 10000
+    let maxIterations = 20000
         step (Go inps s m !cnt) 
             | cnt > maxIterations = Nothing
+            | done s m = Nothing
             | otherwise = 
                 let m' = exec m inps
                     (s', inps') = sim s m'
