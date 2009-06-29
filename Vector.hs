@@ -35,6 +35,11 @@ scale s (V2 (!x1, !y1)) =
 vector2 :: Double -> Double -> Vector2
 vector2 x y = V2 (x `seq` x, y `seq` y)
 
+reflect (V2 (!x, !y)) = 
+    let x' = x * (-1)
+        y' = y * (-1)
+    in V2 (x', y')
+
 vecX (V2 (!x, !y)) = x
 vecY (V2 (!x, !y)) = y
 

@@ -5,6 +5,9 @@ where
 
 import Data.Array.Unboxed
 import Data.Maybe
+import Debug.Trace
+import System.IO
+import System.IO.Unsafe
 
 import Machine
 import Scenario
@@ -14,13 +17,19 @@ data HohmannState = HS Elapsed [Position] Step
 type Elapsed = Int
 type Position = Vector2
 data Step = Start 
-          | Inner TargetRadius TransitSpeed FinalSpeed Fired
-          | Done
+          | Inner TargetRadius FinalSpeed
+          | Done 
 type StartRadius = Double
 type TargetRadius = Double
 type TransitSpeed = Double
 type FinalSpeed = Double
 type Fired = Bool
+
+tr msg v = 
+    let io = unsafePerformIO $ do
+               putStrLn msg
+               hFlush stdout
+    in io `seq` v
 
 hohmannInit = HS 0 [] Start
 
@@ -43,22 +52,25 @@ hohmann hs@(HS !elapsed !pos Start) m
             vtxB = sqrt (earthGM * (2 / targetRadius - atxI))
             dvA = vtxA - viA
             dvB = vfB - vtxB
-            velocity = currVelocity p (last pos) period
+            velocity = currVelocity (reflect p) (reflect $ last pos) period
             thrust = dvA `scale` normalize velocity
-        in (stepHS hs p (Inner targetRadius dvA dvB False)
+        in (stepHS hs p (Inner targetRadius dvB)
            , deltaV thrust)
-hohmann hs@(HS _ !pos s@(Inner targetRadius dvA dvB fired)) m 
-    | abs (currRadius - targetRadius) < 1000 && fired = 
-          (stepHS hs p Done, [])
-    | abs (currRadius - targetRadius) < 1000 && not fired = 
-          (stepHS hs p (Inner targetRadius dvA dvB True), deltaV thrust)
+hohmann hs@(HS _ !pos s@(Inner targetRadius dvB)) m 
+    | abs (currRadius - targetRadius) < 100 = 
+          (stepHS hs p Done, deltaV thrust)
     | otherwise = (stepHS hs p s, [])
   where
     p = currPos m 
     velocity = currVelocity p (last pos) period
     currSpeed = magnitude velocity
     currRadius = magnitude p
-    thrust = min (currFuel m) dvB `scale` normalize velocity
+    thrust = dvB `scale` normalize velocity
+{-hohmann hs@(HS _ !pos Done) m = tr ("distance: " ++ show (abs $ currRadius - targetRadius)) (hs, [])
+  where
+    p = currPos m 
+    currRadius = magnitude p
+    targetRadius = let r = (outputs m) ! 0x4 in r `seq` r-}
 hohmann hs m = (hs, [])
 
 initHS :: HohmannState -> Position -> HohmannState
@@ -76,6 +88,5 @@ period :: Double
 period = 1 -- measure velocity over 10 seconds
         
 hohmannStop :: HohmannState -> Machine -> Bool
-hohmannStop (HS _ _ Done) _ = True
 hohmannStop _ m = currScore m /= 0
 

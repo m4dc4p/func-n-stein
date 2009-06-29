@@ -18,6 +18,11 @@ type Extractor = Machine -> Output
 nothing :: Controller s
 nothing x _ = (x, [])
 
+constant (p':p:_) m = 
+    let dir = normalize (p `vecSub` p')
+    in (currPos m : [p'], deltaV (10 `scale` dir))
+constant p m = (currPos m : p, [])
+
 -- | The controller that reads the output adn
 -- feeds it into the inputs.
 echoOutput :: Extractor -> Controller s
@@ -39,7 +44,7 @@ runMachine :: Controller s
            -> Extractor
            -> s -> ScenarioID -> Program -> Trace
 runMachine sim done getOutps init scenario prog =
-    let maxIterations = 20000
+    let maxIterations = 30000
         step (Go inps s m !cnt) 
             | cnt > maxIterations = Nothing
             | done s m = Nothing

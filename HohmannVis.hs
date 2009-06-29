@@ -52,8 +52,8 @@ main = do
     m <- newMVar (frame t)
     let loop [] i = loop (t:ts) 0
         loop (f':fs') i = do
-         putStrLn $ "Frame " ++ show i
+         putStrLn $ "Frame " ++ show (i * 50)
          putMVar m (frame f')
-         loop (drop 10 fs') (i + 1)
+         loop (drop 50 fs') (i + 1)
     forkIO (loop ts 1)
     initBoardViewer config m

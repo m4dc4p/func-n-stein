@@ -101,7 +101,7 @@ runScenario Single _ _ = singleSolution
 runScenario Simple _ _ = simpleSolution
 runScenario Echo configID program = runMachine (echoOutput hohmannOuts) neverStop hohmannOuts hohmannInit configID program
 runScenario DoNothing configID program = runMachine nothing neverStop hohmannOuts hohmannInit configID program
-runScenario Hohmann configID program = runMachine hohmann hohmannStop hohmannOuts hohmannInit configID program
+runScenario Hohmann configID program = runMachine hohmann neverStop hohmannOuts hohmannInit configID program
 runScenario scenarioID configID program = error $ "Unsupported scenario " ++ show scenarioID
 
 -- | Write a trace of the output for a scenario.
