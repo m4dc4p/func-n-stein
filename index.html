@@ -210,6 +210,33 @@ exec m@(Machine { instrs = instrs }) inps =
     >Reading the contest blog, it seems the first problem is actually scored based on fuel <strong
       >used</strong
       >, not remaining. Hohmann is the wrong approach to the problem in that case, but I'm still going to implement it just to see how it behaves.</p
+    ><h3 id="june-29-1100-am"
+    >June 29, 11:00 AM</h3
+    ><p
+    >I submitted my final program and traces for the first scenario. Unfortunately I never managed to get a score. My visualization worked beautifully, and it seemed like I was making the transfer orbit correctly. However, I suspect I'm reading some value backwards or have a sign error. Ah well, it was a fun time and I thought the machine I implemented was pretty slick. Very fast and didn't leak a lot of memory. Here's to next year!</p
+    ><p
+    >For the curious, the repo is available from git://github.com/m4dc4p/func-n-stein.git. With the <a href="http://hackage.haskell.org/platform/"
+      >Haskell Platform</a
+      > installed it's really easy to build. First get <a href="http://hackage.haskell.org/package/chalkboard"
+      >chalkboard</a
+      > and <a href="http://hackage.haskell.org/package/chalkboard-viewer"
+      >chalkboard-viewer</a
+      > from Hackage (or use caball install). In the source directory, type:</p
+    ><pre
+    ><code
+      >&gt; cabal build
+&gt; dist\build\func-n-stein\func-n-stein -s hohmann -c 1001
+</code
+      ></pre
+    ><p
+    >and the first scenario will be run. To visualize it:</p
+    ><pre
+    ><code
+      >&gt; dist\build\hohmann-vis\hohmann-vis hohmann_1001.trc
+</code
+      ></pre
+    ><p
+    >Only the first scenario is supported, with config values 1001 - 1004.</p
     ></div> </div> </div> </div> </div>
 
 </body
